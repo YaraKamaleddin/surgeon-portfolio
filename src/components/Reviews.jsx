@@ -1,156 +1,186 @@
 import React, { useState, useEffect } from 'react';
-import { Star, MessageSquareHeart, Send, CheckCircle2 } from 'lucide-react';
+import { Star, MessageSquarePlus, UserCheck, Send } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 
 export default function Reviews() {
-  const [reviews, setReviews] = useState(() => {
-    const savedReviews = localStorage.getItem('dr_sawas_reviews');
-    return savedReviews ? JSON.parse(savedReviews) : [
-      {
-        id: 1,
-        author: 'والد الطفل كريم',
-        rating: 5,
-        text: 'تعامل راقٍ جداً وشرح مفصل ومطمئن للأهل قبل وبعد العملية. كل الشكر للدكتور محمد ملهم على دقته ومتابعته المستمرة.',
-        date: '2026-05-10'
-      },
-      {
-        id: 2,
-        author: 'أم زيد',
-        rating: 5,
-        text: 'من أفضل أطباء جراحة الأطفال والمسالك البولية في دمشق. تشخيص دقيق واهتمام إنساني كبير بالطفل.',
-        date: '2026-05-12'
-      }
-    ];
-  });
-
-  const [form, setForm] = useState({
-    author: '',
-    rating: 5,
-    text: ''
-  });
-
-  const [submitted, setSubmitted] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [author, setAuthor] = useState('');
+  const [rating, setRating] = useState(5);
+  const [text, setText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedMsg, setSubmittedMsg] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('dr_sawas_reviews', JSON.stringify(reviews));
-  }, [reviews]);
+    const q = query(collection(db, 'reviews'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedReviews = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setReviews(fetchedReviews);
+    });
 
-  const handleSubmit = (e) => {
+    return () => unsubscribe();
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.author || !form.text) return;
+    if (!author.trim() || !text.trim()) return;
 
-    const newReview = {
-      id: Date.now(),
-      author: form.author,
-      rating: Number(form.rating),
-      text: form.text,
-      date: new Date().toLocaleDateString('ar-SY')
-    };
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, 'reviews'), {
+        author: author.trim(),
+        rating: Number(rating),
+        text: text.trim(),
+        source: 'زائر الموقع الرسمي',
+        createdAt: serverTimestamp(),
+      });
 
-    setReviews([newReview, ...reviews]);
-    setForm({ author: '', rating: 5, text: '' });
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 4000);
+      setAuthor('');
+      setRating(5);
+      setText('');
+      setSubmittedMsg(true);
+      setTimeout(() => setSubmittedMsg(false), 4000);
+    } catch (error) {
+      console.error('Error adding review:', error);
+      alert('حدث خطأ أثناء إرسال التقييم، يرجى المحاولة مرة أخرى.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <section id="reviews" className="py-28 bg-white border-t border-slate-100">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="reviews" className="py-24 bg-white border-t border-slate-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
-          <div className="bg-teal-100 text-teal-700 w-14 h-14 rounded-2xl flex items-center justify-center mx-auto">
-            <MessageSquareHeart className="w-7 h-7" />
-          </div>
+        {}
+        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <span className="text-teal-600 font-bold text-sm bg-teal-50 px-4 py-1.5 rounded-full inline-block">
-            آراء وتقييمات المراجعين
+            آراء وتقييمات الزوار
           </span>
-          <h2 className="text-3xl font-extrabold text-slate-900">
-            تجربة الأهل وآراؤهم في العيادة
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
+            تجارب الأهالي والمرضى مع العيادة
           </h2>
-          <p className="text-slate-600 text-sm">
-            يمكنك قراءة تجارب المراجعين السابقين، أو ترك تقييمك ورأيك بكل سهولة.
+          <p className="text-slate-600 text-sm sm:text-base">
+            نعتز بثقة الأهالي ونسعد بمشاركتكم لتجربتكم الطبية بعد زيارة العيادة أو إجراء المتابعة.
           </p>
         </div>
 
-        {}
-        <div className="grid md:grid-cols-2 gap-6 mb-16">
-          {reviews.map((rev) => (
-            <div key={rev.id} className="bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-200/80 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-amber-400">
-                  {[...Array(rev.rating || 5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-current" />
+        <div className="grid lg:grid-cols-12 gap-10 items-start">
+          
+          {}
+          <div className="lg:col-span-5 bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs">
+            <div className="flex items-center gap-2.5 mb-6">
+              <div className="bg-teal-100 text-teal-700 p-2.5 rounded-xl">
+                <MessageSquarePlus className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-900">أضف تقييمك وتجربتك</h3>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">الاسم أو الصفة (مثال: والد الطفل كريم)</label>
+                <input
+                  type="text"
+                  required
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                  placeholder="أدخل اسمك..."
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">التقييم العام</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      type="button"
+                      key={star}
+                      onClick={() => setRating(star)}
+                      className="p-1.5 rounded-lg hover:bg-amber-50 transition"
+                    >
+                      <Star
+                        className={`w-6 h-6 ${
+                          star <= rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'
+                        }`}
+                      />
+                    </button>
                   ))}
                 </div>
-                <span className="text-xs text-slate-400">{rev.date}</span>
               </div>
-              <p className="text-slate-700 text-sm sm:text-base leading-relaxed">"{rev.text}"</p>
-              <p className="font-extrabold text-slate-900 text-xs sm:text-sm pt-2 border-t border-slate-200/60">
-                — {rev.author}
-              </p>
-            </div>
-          ))}
-        </div>
 
-        {}
-        <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl max-w-2xl mx-auto">
-          <h3 className="text-xl font-extrabold mb-2 text-center">أضف تقييمك ورأيك في العيادة</h3>
-          <p className="text-slate-400 text-xs text-center mb-6">رأيك يساهم في مساعدة العائلات الأخرى ويعزز جودة الخدمة الطبية.</p>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">رأيك وتفاصيل التجربة</label>
+                <textarea
+                  rows="4"
+                  required
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="اكتب ملاحظاتك أو تجربتك مع الدكتور..."
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:border-teal-500"
+                />
+              </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1.5">الاسم أو صلة القرابة (مثال: والد الطفل أحمد)*</label>
-              <input
-                type="text"
-                required
-                placeholder="اكتب اسمك هنا..."
-                value={form.author}
-                onChange={(e) => setForm({ ...form, author: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-teal-500 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1.5">التقييم بالنجوم</label>
-              <select
-                value={form.rating}
-                onChange={(e) => setForm({ ...form, rating: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-teal-500 outline-none"
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 px-6 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <option value="5">⭐⭐⭐⭐⭐ (ممتاز جداً)</option>
-                <option value="4">⭐⭐⭐⭐ (جيد جداً)</option>
-                <option value="3">⭐⭐⭐ (جيد)</option>
-              </select>
-            </div>
+                <Send className="w-4 h-4" />
+                <span>{isSubmitting ? 'جاري النشر...' : 'نشر التقييم الآن'}</span>
+              </button>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1.5">رأيك أو تجربتك بالعيادة*</label>
-              <textarea
-                rows="3"
-                required
-                placeholder="اكتب تفاصيل تجربتك مع العلاج أو المتابعة..."
-                value={form.text}
-                onChange={(e) => setForm({ ...form, text: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-teal-500 outline-none resize-none"
-              />
-            </div>
+              {submittedMsg && (
+                <p className="text-xs font-bold text-teal-700 bg-teal-50 p-3 rounded-xl text-center">
+                  شكراً لك! تم نشر تقييمك بنجاح وأصبح مرئياً للجميع.
+                </p>
+              )}
+            </form>
+          </div>
 
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl transition cursor-pointer shadow-lg shadow-teal-600/20"
-            >
-              <Send className="w-4 h-4" />
-              <span>نشر التعليق والتقييم</span>
-            </button>
-
-            {submitted && (
-              <div className="flex items-center justify-center gap-2 text-teal-400 bg-teal-950/60 p-3 rounded-xl text-xs font-bold border border-teal-800">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>شكراً لك! تم إضافة تعليقك بنجاح وعرضه في الموقع.</span>
+          {}
+          <div className="lg:col-span-7 space-y-4">
+            {reviews.length === 0 ? (
+              <div className="bg-slate-50 border border-dashed border-slate-200 rounded-3xl p-12 text-center text-slate-500 text-sm">
+                لا توجد تقييمات منشورة بعد. كن أول من يشارك تجربته مع العيادة!
               </div>
-            )}
-          </form>
-        </div>
+            ) : (
+              reviews.map((rev) => (
+                <div
+                  key={rev.id}
+                  className="bg-slate-50/70 p-6 rounded-3xl border border-slate-200/70 space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="bg-teal-600 text-white w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">
+                        {rev.author.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-sm">{rev.author}</h4>
+                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                          <UserCheck className="w-3 h-3 text-teal-600" />
+                          {rev.source || 'تقييم موثق'}
+                        </span>
+                      </div>
+                    </div>
 
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: rev.rating || 5 }).map((_, i) => (
+                        <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-slate-700 text-sm leading-relaxed">{rev.text}</p>
+                </div>
+              ))
+            )}
+          </div>
+
+        </div>
       </div>
     </section>
   );
