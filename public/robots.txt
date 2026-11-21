@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://transcendent-kheer-3f04ba.netlify.app/sitemap.xml
+Sitemap: https://dr-mohamad-mulham-sawas.netlify.app/sitemap.xml
